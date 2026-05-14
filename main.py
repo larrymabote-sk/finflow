@@ -1,5 +1,4 @@
 import pandas as pd
-df = pd.read_csv("data/raw/meezan_transactions.csv")
+df = pd.read_excel("data/raw/kyc_records.xlsx")
 
-print(df["Source_Currency"].head(10))
-print(df["Source_Currency"].unique())
+print(df.head(10))
