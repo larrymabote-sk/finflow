@@ -1,9 +1,12 @@
 import streamlit as st
 import pandas as pd
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import plotly.express as px
 from sqlalchemy import create_engine
 from dotenv import load_dotenv
-import os
+from ai.text_to_sql import agent
 
 load_dotenv()
 
@@ -19,7 +22,8 @@ page = st.sidebar.selectbox("Navigate", [
     "Revenue",
     "Risk & Compliance",
     "KYC Compliance",
-    "Exchange Rate Competitiveness"
+    "Exchange Rate Competitiveness",
+    "Ask FinFlow"
 ])
 
 if page == "Transaction Volume":
@@ -106,3 +110,14 @@ elif page == "Exchange Rate Competitiveness":
         title = "Top 10 Country Corridors With The Most Competitve Exchange Rates"
     )
     st.plotly_chart(fig)
+elif page == "Ask FinFlow":
+    question = st.chat_input()
+    
+    if question:
+        try:
+            agent_processing = agent.invoke(question)
+            with st.chat_message("assistant"):
+                st.write(agent_processing["output"])
+        except Exception as e:
+            with st.chat_message("assistant"):
+                st.write("Sorry, I couldn't process that question. Please try rephrasing or asking again.")
