@@ -101,7 +101,6 @@ def clean_kyc():
     print("silver_kyc loaded")
 
 
-clean_kyc()
 
 #validating Transactions table/database.
 
@@ -170,7 +169,6 @@ def validate_transactions():
     df.to_sql("silver_transactions", con=engine, if_exists="replace", index=False)
     print("silver_transactions loaded")
     
-validate_transactions()
 
 def enrich_transactions():
     df = pd.read_sql("SELECT * FROM silver_transactions", engine)
@@ -203,5 +201,3 @@ def enrich_transactions():
 
     df.to_sql("silver_transactions", con=engine, if_exists="replace", index=False)
     print("silver_transactions reloaded")
-
-enrich_transactions()

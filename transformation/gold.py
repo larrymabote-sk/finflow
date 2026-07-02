@@ -26,7 +26,6 @@ def gold_transaction_volume():
 
     gold_df.to_sql("gold_transaction_volume", con=engine, if_exists="replace", index=False)
 
-gold_transaction_volume()
 
 
 def gold_fraud_aml_summary():
@@ -43,9 +42,8 @@ def gold_fraud_aml_summary():
     print("Fraud & AML Summary Successfully Done!")
 
     gold_df.to_sql("gold_fraud_aml_summary", con=engine, if_exists="replace", index=False)
-gold_fraud_aml_summary()
 
-def revenue_summary():
+def gold_revenue_summary():
     df = pd.read_sql("SELECT * FROM silver_transactions", engine)
     gold_df = df.groupby(["transaction_type", "channel"]).agg(
         total_transactions = ("transaction_id", "count"),
@@ -59,7 +57,6 @@ def revenue_summary():
     print("Revenue Summary Successfully Done!")
     gold_df.to_sql("gold_revenue_summary", con=engine, if_exists="replace", index=False)
 
-revenue_summary()
 
 def gold_risk_distribution():
     df = pd.read_sql("SELECT * FROM silver_transactions", engine)
@@ -80,7 +77,6 @@ def gold_risk_distribution():
 
     print("Risk Distribution Successfully Done!")
     gold_df.to_sql("gold_risk_distribution", con=engine, if_exists="replace", index=False)
-gold_risk_distribution()
 
 def gold_exchange_rate_competitiveness():
     df = pd.read_sql("SELECT * FROM silver_transactions", engine)
@@ -94,7 +90,6 @@ def gold_exchange_rate_competitiveness():
 
     print("Exchange Rate Competitiveness Successfully Done!")
     gold_df.to_sql("gold_exchange_rate_competitiveness", con=engine, if_exists="replace", index=False)
-gold_exchange_rate_competitiveness()
 
 
 def gold_kyc_compliance():
@@ -111,4 +106,3 @@ def gold_kyc_compliance():
     
     print("KYC Compliance Successfully Done!")
     gold_df.to_sql("gold_kyc_compliance", con=engine, if_exists="replace", index=False)
-gold_kyc_compliance()
