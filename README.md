@@ -98,13 +98,13 @@ Raw Sources (CSV · Excel · REST API)
 ## Key Design Decisions
 
 **Incremental loading for transactions, full refresh for KYC**
-Transactions grow continuously — reloading 15,000 rows every run would be wasteful and fragile at scale. A watermark on `transaction_id` means only new rows load. KYC records update in place rather than append, so full refresh guarantees the latest version of every record is always present.
+Transactions grow continuously, so reloading 15,000 rows every run would be wasteful and fragile at scale. A watermark on `transaction_id` means only new rows load. KYC records update in place rather than append, so full refresh guarantees the latest version of every record is always present.
 
 **Bronze never enforces primary keys**
-Bronze is an audit layer — it must capture everything including duplicates and malformed records. A primary key constraint on `transaction_id` would silently reject duplicates, which defeats the purpose. Constraints belong in Silver.
+Bronze is an audit layer, so it must capture everything including duplicates and malformed records. A primary key constraint on `transaction_id` would silently reject duplicates, which defeats the purpose. Constraints belong in Silver.
 
 **Transactions are validated, not corrected**
-Financial records are immutable. Changing a converted amount or exchange rate — even to fix a data quality issue — would be falsifying records. Silver flags bad transactions with `is_valid` and `invalid_reason` and leaves the original values untouched.
+Financial records are immutable. Changing a converted amount or exchange rate or even to fix a data quality issue would be falsifying records. Silver flags bad transactions with `is_valid` and `invalid_reason` and leaves the original values untouched.
 
 **Two timestamps on exchange rates**
 `rate_last_updated` is when the provider updated the rate. `ingested_at` is when the pipeline ran. The gap between them reveals data staleness which is critical in a live multi-currency system.
