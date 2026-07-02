@@ -6,7 +6,7 @@
 
 ## What This Project Does
 
-FinFlow models the data infrastructure of a fintech company processing cross-border transactions across 7 currencies and 7 countries. Raw data arrives from three sources — a CSV of 15,000 transactions, a messy Excel KYC file, and a live exchange rate API — and flows through Bronze, Silver, and Gold layers into an analytics dashboard and a natural language query interface.
+FinFlow models the data infrastructure of a fintech company processing cross-border transactions across 7 currencies and 7 countries. Raw data arrives from three sources: a CSV of 15,000 transactions, a messy Excel KYC file, and a live exchange rate API, and flows through Bronze, Silver, and Gold layers into an analytics dashboard and a natural language query interface.
 
 The pipeline runs end-to-end via a single Prefect-orchestrated command.
 
