@@ -1,6 +1,6 @@
 # FinFlow — Fintech Data Pipeline
 
-> An end-to-end data engineering portfolio project simulating a production-grade fintech pipeline for a multi-currency financial company. Built on Medallion Architecture with a Streamlit dashboard, Prefect orchestration, and a LangChain AI agent.
+>An end-to-end data engineering portfolio project simulating a production-grade fintech pipeline for a multi-currency financial company. Built on Medallion Architecture with cloud-native ingestion, a managed cloud database, a Streamlit dashboard, Prefect orchestration, and a LangChain AI agent.
 
 ---
 
@@ -14,12 +14,12 @@ The pipeline runs end-to-end via a single Prefect-orchestrated command.
 
 ## Stack
 
-Python · PostgreSQL · SQLAlchemy · Pandas · Prefect · Streamlit · Plotly · LangChain · Groq (Llama 3.3) · REST APIs
+Python · Google Cloud Storage · Cloud SQL (PostgreSQL 16) · Cloud SQL Auth Proxy · SQLAlchemy · Pandas · Prefect · Streamlit · Plotly · LangChain · Groq (Llama 3.3) · REST APIs
 
 ---
 
 ## Architecture
-Raw Sources (CSV · Excel · REST API)
+Raw Sources — CSV & Excel from GCS, exchange rates from live REST API
 
 │
 
@@ -95,6 +95,20 @@ Raw Sources (CSV · Excel · REST API)
 
 ---
 
+## Cloud Infrastructure
+
+FinFlow runs against Google Cloud Platform rather than a purely local stack:
+
+**Google Cloud Storage** (`gs://finflow-raw-data-lm`) holds the raw source files (`meezan_transactions.csv`, `kyc_records.xlsx`). Ingestion scripts read directly from GCS using `google-cloud-storage`, rather than local disk.
+
+**Cloud SQL (PostgreSQL 16)** hosts the `finbase` database in `us-central1`, replacing the local Postgres instance for all Bronze/Silver/Gold tables.
+
+**Cloud SQL Auth Proxy** provides a secure, encrypted local tunnel to Cloud SQL, avoiding the need to expose the database on a public IP. The pipeline connects to the proxy on `127.0.0.1`, which forwards traffic to the instance under authenticated, encrypted connections.
+
+**Least-privilege access** is enforced at the database level: a dedicated `finflow_agent` PostgreSQL user exists on Cloud SQL with `SELECT`-only access to Silver and Gold tables, mirroring the security model used locally.
+
+---
+
 ## Key Design Decisions
 
 **Incremental loading for transactions, full refresh for KYC**
@@ -114,6 +128,12 @@ The LangChain agent connects via a dedicated `finflow_agent` PostgreSQL user wit
 
 **SQLAlchemy over raw psycopg2**
 Pandas `read_sql()` and `to_sql()` require a SQLAlchemy engine. Using raw psycopg2 causes placeholder syntax conflicts that crash the pipeline silently.
+
+**Bulk inserts via `execute_values`, not `executemany`**
+Once ingestion moved to Cloud SQL, every row insert became a network round trip instead of a same-machine call. `cursor.executemany()` sends one row per round trip for 15,000 transaction rows, that meant minutes of silent, opaque execution. Switching to `psycopg2.extras.execute_values()` batches rows into a single multi-row `INSERT`, cutting round trips by roughly 100x and making runtime predictable.
+
+**Failures are raised, not just logged**
+Ingestion functions originally caught exceptions, printed them, and returned normally which meant Prefect saw a "successful" task even when a network failure (e.g. GCS auth timeout) meant zero rows were written. Exceptions are now re-raised after logging, so a real failure surfaces as a failed Prefect task instead of silently cascading into downstream errors like a missing table.
 
 ---
 
@@ -184,7 +204,7 @@ finflow/
 
 ## Setup
 
-**Prerequisites:** Python 3.10+, PostgreSQL 16 on port 5433
+**Prerequisites**: Python 3.10+, a GCP project with a Cloud SQL PostgreSQL 16 instance and a GCS bucket, the Cloud SQL Auth Proxy binary, and gcloud CLI authenticated (gcloud auth application-default login)
 
 ```bash
 git clone https://github.com/larrymabote-sk/finflow.git
@@ -193,23 +213,22 @@ pip install -r requirements.txt
 ```
 
 Create a `.env` file in the project root:
-DB_HOST=localhost
-
-DB_PORT=5433
-
+DB_HOST=127.0.0.1
+DB_PORT=5434
 DB_NAME=finbase
-
 DB_USER=postgres
-
-DB_PASSWORD=your_password
-
+DB_PASSWORD=your_cloud_sql_password
 AGENT_DB_USER=finflow_agent
-
 AGENT_DB_PASSWORD=your_agent_password
-
 GROQ_API_KEY=your_groq_key
-
 API_KEY=your_exchangerate_api_key
+GCS_BUCKET_NAME=finflow-raw-data-lm
+
+Start the Cloud SQL Auth Proxy in a separate terminal (leave it running):
+
+```bash
+./cloud-sql-proxy PROJECT_ID:REGION:finflow-db --port=5434
+```
 
 Run the full pipeline:
 
@@ -245,6 +264,7 @@ Running `main.py` creates and populates these tables in PostgreSQL:
 - [x] Prefect orchestration — dependency-aware pipeline execution
 - [x] Streamlit dashboard — 5-page analytics interface
 - [x] LangChain AI agent — natural language SQL queries with read-only security
+- [x] GCP migration — GCS ingestion, Cloud SQL, Auth Proxy, least-privilege cloud DB user
 
 ---
 
